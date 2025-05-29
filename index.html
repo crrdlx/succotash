@@ -1,5 +1,3 @@
-<!-- Succotash Game Version 0.1.13 -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -166,7 +164,7 @@
     </div>
     <div id="status"></div>
     <div id="dice-result"></div>
-    <button id="reset-button">Reset Game</button>
+    <button id="reset-button">Reset</button>
 
     <script>
         const boardSize = 5;
@@ -410,6 +408,8 @@
                 if (winningPath) {
                     gameActive = false;
                     drawWinningPath(winningPath);
+                    const loser = movingPlayer === 'corn' ? 'Bean' : 'Corn';
+                    document.getElementById('status').textContent = `${movingPlayer} Wins! Connected to the other side! ${loser} got Succotashed!`;
                     // Status messages already set by checkWinCondition
                 } else {
                     currentPlayer = opponentPlayer;
@@ -444,8 +444,6 @@
                 const [r, c, currentPath] = q.shift();
 
                 if (r === targetRow) {
-                    document.getElementById('status').textContent = `${player.charAt(0).toUpperCase() + player.slice(1)} Wins! Connected to the other side!`;
-                    document.getElementById('dice-result').textContent = "Game Over!";
                     return currentPath;
                 }
 
@@ -492,7 +490,9 @@
             winCtx.stroke();
         }
 
-        document.getElementById('reset-button').addEventListener('click', initGame);
+        document.getElementById('reset-button').addEventListener('click', () => {
+            location.reload();
+        });
 
         // Start the game
         document.addEventListener('DOMContentLoaded', () => {
@@ -516,6 +516,6 @@ src="https://c.statcounter.com/13139847/0/467bf735/1/"
 alt="Web Analytics Made Easy - Statcounter"
 referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
 <!-- End of Statcounter Code -->
-<!-- End Succotash Game Version 0.1.13 -->
+<!-- End Succotash Game Version 0.1.17 -->
 </body>
 </html>
