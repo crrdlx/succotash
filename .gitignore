@@ -1,3 +1,6 @@
-# Ignore specific HTML files
+# Ignore files starting with index-stable-
+index-*
+
+# Other existing patterns (if any)
 index-gem.html
 index-grok.html
