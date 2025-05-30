@@ -1,3 +1,4 @@
+<!-- Succotash Game Version 0.1.18 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,9 +86,6 @@
             border: 3px solid #d9534f !important; /* Red border for selected, !important to override default */
             box-shadow: 0 0 10px #d9534f;
         }
-        /* .selected .corn, .selected .bean { This would apply if .selected was on piece, not cell
-            transform: scale(1.1);
-        } */
         #status, #dice-result {
             margin-top: 15px;
             font-size: 1.1em;
@@ -96,14 +94,22 @@
             background-color: #fff;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             min-width: 250px;
+            text-align: center; /* Ensure text is centered */
         }
         #status {
             color: #2c3e50;
             font-weight: bold;
         }
+        .status-win-highlight { /* New class for winning message highlight */
+            background-color: yellow !important;
+            font-weight: bold;
+            color: #333 !important; /* Ensure text is readable on yellow */
+        }
         #dice-result {
             color: #c0392b;
-            min-height: 20px;
+            min-height: 20px; /* Ensure it has height even when empty for stars */
+            position: relative; /* For positioning stars */
+            overflow: hidden;   /* To contain stars */
         }
         button#reset-button {
             margin-top: 20px;
@@ -149,6 +155,25 @@
         #choose-player button:hover {
             background-color: #2980b9;
         }
+
+        /* Star animation styles */
+        .star {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background-color: gold;
+            border-radius: 50%;
+            opacity: 0;
+            animation: sparkle 1.5s ease-out forwards;
+            box-shadow: 0 0 3px 1px yellow;
+        }
+
+        @keyframes sparkle {
+            0% { opacity: 0; transform: translateY(15px) scale(0.3); } /* Start from bottom, small */
+            20% { opacity: 1; transform: translateY(0px) scale(1); }   /* Fade in, grow, move up */
+            80% { opacity: 1; transform: translateY(-15px) scale(0.8); } /* Move further up, start shrinking */
+            100% { opacity: 0; transform: translateY(-20px) scale(0.3); } /* Fade out, further up */
+        }
     </style>
 </head>
 <body>
@@ -164,7 +189,7 @@
     </div>
     <div id="status"></div>
     <div id="dice-result"></div>
-    <button id="reset-button">Reset</button>
+    <button id="reset-button">New Game</button>
 
     <script>
         const boardSize = 5;
@@ -184,7 +209,7 @@
         function initGame() {
             board = Array(boardSize).fill().map(() => Array(boardSize).fill(null));
             pieces = { corn: [], bean: [] };
-            currentPlayer = 'corn';
+            // currentPlayer is set by startGame or defaults to corn if startGame isn't called first
             selectedPiece = null;
             awaitingPlacement = null;
             gameActive = true;
@@ -209,41 +234,27 @@
                 pieces.bean.push(pieceRef);
                 board[boardSize - 1][i] = [pieceRef];
             }
-            document.getElementById('status').textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
-            document.getElementById('dice-result').textContent = '';
+
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
+            statusEl.classList.remove('status-win-highlight'); // Remove highlight on reset
+
+            const diceResultEl = document.getElementById('dice-result');
+            diceResultEl.innerHTML = ''; // Clear dice result and any stars
+
             renderBoard();
         }
 
         function startGame(firstPlayer) {
-            if (firstPlayer === 'bean') {
-                currentPlayer = 'bean';
-                document.getElementById('status').textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
-                // Simulate a Corn move to effectively make it Bean's first turn
-                setTimeout(() => {
-                    simulateCornMove();
-                }, 500); // Small delay to show the initial status
-            } else {
-                currentPlayer = firstPlayer;
-            }
+            currentPlayer = firstPlayer; // Set current player before initGame
             document.getElementById('choose-player').style.display = 'none';
-            initGame();
+            initGame(); // initGame will now use the chosen currentPlayer for the initial status
+
+            // No simulation needed here if Bean starts, initGame and renderBoard handle it.
+            // If Corn starts, it's already their turn as per default initGame logic.
         }
 
-        function simulateCornMove() {
-            // Find a valid Corn move (simplest: move the first piece one space)
-            for (let col = 0; col < boardSize; col++) {
-                if (board[0][col] && board[0][col].some(p => p.type === 'corn')) {
-                    const pieceToMove = board[0][col][0];
-                    if (col + 1 < boardSize && !board[0][col + 1]) {
-                        movePiece(pieceToMove, 0, col, 0, col + 1);
-                        return;
-                    }
-                }
-            }
-            // If no simple move is found, just switch turns (shouldn't happen)
-            currentPlayer = 'bean';
-            document.getElementById('status').textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
-        }
+        // simulateCornMove function removed as it's no longer necessary with the current startGame logic
 
         // Render the game board
         function renderBoard() {
@@ -265,7 +276,6 @@
                         });
                     }
 
-                    // Highlight selected piece's original cell
                     if (selectedPiece && selectedPiece.originalRow === row && selectedPiece.originalCol === col) {
                         cell.classList.add('selected');
                     }
@@ -275,7 +285,6 @@
             }
         }
 
-        // Handle cell clicks
         function handleCellClick(event) {
             if (!gameActive) return;
 
@@ -293,7 +302,7 @@
                     awaitingPlacement.pieceRefToPlace.col = col;
 
                     const battleWinner = awaitingPlacement.defeatedPlayerType === 'corn' ? 'bean' : 'corn';
-                    currentPlayer = battleWinner;
+                    currentPlayer = battleWinner; // The winner of the battle gets the next turn
 
                     document.getElementById('status').textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
                     awaitingPlacement = null;
@@ -310,8 +319,8 @@
                     const sRow = selectedPiece.originalRow;
                     const sCol = selectedPiece.originalCol;
 
-                    selectedPiece = null; // Nullify selection state
-                    renderBoard(); // Re-render immediately to remove highlight from original cell
+                    selectedPiece = null;
+                    renderBoard();
 
                     movePiece(pieceToMove, sRow, sCol, row, col);
                 } else {
@@ -329,16 +338,15 @@
             }
         }
 
-        // Check if a move is valid
         function isValidMove(fromRow, fromCol, toRow, toCol) {
             const rowDiff = Math.abs(fromRow - toRow);
             const colDiff = Math.abs(fromCol - toCol);
             return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
         }
 
-        // Simulate a dice roll
         function simulateDiceRoll(callback) {
             const diceResultEl = document.getElementById('dice-result');
+            diceResultEl.innerHTML = ''; // Clear previous content (like stars)
             const diceFrames = ["[ ● ]", "[ ● ● ]", "[ ● ● ● ]", "[ ● ● ● ● ]", "[ ● ● ● ● ● ]", "[ ● ● ● ● ● ● ]"];
             let frame = 0;
             diceResultEl.textContent = "Rolling...";
@@ -352,7 +360,6 @@
             }, 100);
         }
 
-        // Move a piece and handle combat
         function movePiece(pieceRefToMove, fromRow, fromCol, toRow, toCol) {
             const movingPlayer = pieceRefToMove.type;
             const opponentPlayer = movingPlayer === 'corn' ? 'bean' : 'corn';
@@ -380,17 +387,18 @@
                     const diceRoll = Math.floor(Math.random() * 6) + 1;
                     let battleWinner, battleLoser, pieceToRemoveFromBoard, pieceToRelocateToHomeRow;
 
-                    if (diceRoll >= 3) {
+                    if (diceRoll >= 3) { // Moving player (attacker) wins on 3+
                         battleWinner = movingPlayer;
                         battleLoser = opponentPlayer;
                         pieceToRemoveFromBoard = board[toRow][toCol].find(p => p.type === opponentPlayer);
-                        pieceToRelocateToHomeRow = pieceToRemoveFromBoard;
-                    } else {
+                    } else { // Opponent (defender) wins on 1 or 2
                         battleWinner = opponentPlayer;
                         battleLoser = movingPlayer;
+                        // The piece that just moved is the one to be sent home if the attacker loses
                         pieceToRemoveFromBoard = pieceRefToMove;
-                        pieceToRelocateToHomeRow = pieceToRemoveFromBoard;
                     }
+                    pieceToRelocateToHomeRow = pieceToRemoveFromBoard;
+
 
                     board[toRow][toCol] = board[toRow][toCol].filter(p => p.id !== pieceToRemoveFromBoard.id);
                     if (board[toRow][toCol].length === 0) {
@@ -402,15 +410,31 @@
                     document.getElementById('status').textContent = `${battleLoser.charAt(0).toUpperCase() + battleLoser.slice(1)}, click an empty spot on YOUR home row.`;
                     renderBoard();
                 });
-            } else {
-                document.getElementById('dice-result').textContent = '';
+            } else { // No battle
+                document.getElementById('dice-result').innerHTML = ''; // Clear dice result if no battle
                 const winningPath = checkWinCondition(movingPlayer);
                 if (winningPath) {
                     gameActive = false;
                     drawWinningPath(winningPath);
+
+                    const winnerCapitalized = movingPlayer.charAt(0).toUpperCase() + movingPlayer.slice(1);
                     const loser = movingPlayer === 'corn' ? 'Bean' : 'Corn';
-                    document.getElementById('status').textContent = `${movingPlayer} Wins! Connected to the other side! ${loser} got Succotashed!`;
-                    // Status messages already set by checkWinCondition
+                    const statusEl = document.getElementById('status');
+                    statusEl.textContent = `${winnerCapitalized} wins the game! ${loser} got Succotashed!`;
+                    statusEl.classList.add('status-win-highlight'); // Add highlight class
+
+                    // Add star animation
+                    const diceResultEl = document.getElementById('dice-result');
+                    diceResultEl.innerHTML = ''; // Clear any previous content
+                    for (let i = 0; i < 15; i++) { // Create 15 stars
+                        const star = document.createElement('div');
+                        star.className = 'star';
+                        star.style.left = `${Math.random() * 100}%`;
+                        star.style.top = `${Math.random() * 80 + 10}%`; // Avoid very top/bottom edges initially
+                        star.style.animationDelay = `${Math.random() * 1.0}s`; // Stagger start times
+                        diceResultEl.appendChild(star);
+                    }
+
                 } else {
                     currentPlayer = opponentPlayer;
                     document.getElementById('status').textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
@@ -419,7 +443,6 @@
             }
         }
 
-        // Check for win condition and return path if win
         function checkWinCondition(player) {
             const opponent = player === 'corn' ? 'bean' : 'corn';
             const startRow = player === 'corn' ? 0 : boardSize - 1;
@@ -464,21 +487,19 @@
                     }
                 }
             }
-            return null; // No win detected
+            return null;
         }
 
-        // Draw the winning path on the canvas
         function drawWinningPath(path) {
             winCtx.clearRect(0, 0, winCanvas.width, winCanvas.height);
             winCtx.beginPath();
-            winCtx.strokeStyle = "rgba(220, 20, 60, 0.8)"; // Crimson red, slightly transparent
-            winCtx.lineWidth = 10; // Thicker line
+            winCtx.strokeStyle = "rgba(220, 20, 60, 0.8)";
+            winCtx.lineWidth = 10;
             winCtx.lineCap = 'round';
             winCtx.lineJoin = 'round';
 
             for (let i = 0; i < path.length; i++) {
                 const [r, c] = path[i];
-                // Calculate center of the cell for drawing
                 const x = c * (cellVisualSize + gapSize) + cellVisualSize / 2;
                 const y = r * (cellVisualSize + gapSize) + cellVisualSize / 2;
                 if (i === 0) {
@@ -491,16 +512,14 @@
         }
 
         document.getElementById('reset-button').addEventListener('click', () => {
-            location.reload();
+            location.reload(); // Reloads the page, effectively resetting everything
         });
 
-        // Start the game
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('choose-player').style.display = 'block';
+            // initGame() will be called by startGame() after player chooses who goes first
         });
     </script>
-<!-- Default Statcounter code for Succotash - The Game
-https://succotash.vercel.app -->
 <script type="text/javascript">
     var sc_project=13139847;
     var sc_invisible=1;
@@ -515,7 +534,6 @@ target="_blank"><img class="statcounter"
 src="https://c.statcounter.com/13139847/0/467bf735/1/"
 alt="Web Analytics Made Easy - Statcounter"
 referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
-<!-- End of Statcounter Code -->
-<!-- End Succotash Game Version 0.1.17 -->
+<!-- Succotash Game Version 0.1.18 -->
 </body>
 </html>
