@@ -22,7 +22,7 @@
         h1 {
             font-family: 'Kablammo', cursive; /* Fun font: Kablammo */
             color: #4a3b2a;
-            margin-bottom: 20px;
+            margin: 0 0 20px 0;
         }
         #board-container {
             position: relative;
@@ -136,7 +136,7 @@
             z-index: 1; /* Behind pieces if pieces had higher z-index, but above board background */
         }
         #choose-player {
-            margin-top: 20px;
+            margin: 20px 0;
             padding: 10px;
             border-radius: 5px;
             background-color: #fff;
@@ -145,6 +145,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            position: relative;
+            z-index: 10;
         }
         #choose-player button {
             margin: 0 10px;
@@ -183,7 +185,7 @@
             display: flex;
             justify-content: center;
             gap: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .nav-button {
@@ -290,11 +292,11 @@
     </style>
 </head>
 <body>
-    <h1>Succotash</h1>
     <div class="nav-bar">
-        <button class="nav-button" onclick="openModal('rules')">Rules</button>
         <button class="nav-button" onclick="openModal('about')">About</button>
+        <button class="nav-button" onclick="openModal('rules')">Rules</button>
     </div>
+    <h1>Succotash</h1>
     <div id="choose-player">
         <button onclick="startGame('corn')">Corn Goes First</button>
         <button onclick="startGame('bean')">Bean Goes First</button>
@@ -363,12 +365,9 @@
         }
 
         function startGame(firstPlayer) {
-            currentPlayer = firstPlayer; // Set current player before initGame
+            currentPlayer = firstPlayer;
             document.getElementById('choose-player').style.display = 'none';
-            initGame(); // initGame will now use the chosen currentPlayer for the initial status
-
-            // No simulation needed here if Bean starts, initGame and renderBoard handle it.
-            // If Corn starts, it's already their turn as per default initGame logic.
+            document.getElementById('status').textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
         }
 
         // simulateCornMove function removed as it's no longer necessary with the current startGame logic
@@ -633,8 +632,12 @@
         });
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('choose-player').style.display = 'block';
-            // initGame() will be called by startGame() after player chooses who goes first
+            // Initialize the game board immediately
+            initGame();
+            // Show the choose player buttons
+            document.getElementById('choose-player').style.display = 'flex';
+            // Set initial status message
+            document.getElementById('status').textContent = "Choose who goes first";
         });
 
         // Modal functions
