@@ -1,4 +1,4 @@
-<!-- Succotash Game Version 0.1.20 Rules and About, Underdog attack -->
+<!-- Succotash Game Version 0.1.21 Rules and About, Underdog attack, move off co-squat to lose -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -496,19 +496,70 @@
             pieceRefToMove.row = toRow;
             pieceRefToMove.col = toCol;
 
-            const movingPlayerPiecesAtDest = board[toRow][toCol].filter(p => p.type === movingPlayer).length;
-            const opponentPiecesAtDest = board[toRow][toCol].filter(p => p.type === opponentPlayer).length;
+            // First check if moving player has won
+            const movingPlayerWinningPath = checkWinCondition(movingPlayer);
+            if (movingPlayerWinningPath) {
+                gameActive = false;
+                drawWinningPath(movingPlayerWinningPath);
+
+                const winnerCapitalized = movingPlayer.charAt(0).toUpperCase() + movingPlayer.slice(1);
+                const loser = movingPlayer === 'corn' ? 'Bean' : 'Corn';
+                const statusEl = document.getElementById('status');
+                statusEl.textContent = `${winnerCapitalized} wins the game! ${loser} got Succotashed!`;
+                statusEl.classList.add('status-win-highlight');
+
+                // Add star animation
+                const diceResultEl = document.getElementById('dice-result');
+                diceResultEl.innerHTML = '';
+                for (let i = 0; i < 15; i++) {
+                    const star = document.createElement('div');
+                    star.className = 'star';
+                    star.style.left = `${Math.random() * 100}%`;
+                    star.style.top = `${Math.random() * 80 + 10}%`;
+                    star.style.animationDelay = `${Math.random() * 1.0}s`;
+                    diceResultEl.appendChild(star);
+                }
+                renderBoard();
+                return;
+            }
+
+            // Then check if opponent has won
+            const opponentWinningPath = checkWinCondition(opponentPlayer);
+            if (opponentWinningPath) {
+                gameActive = false;
+                drawWinningPath(opponentWinningPath);
+
+                const winnerCapitalized = opponentPlayer.charAt(0).toUpperCase() + opponentPlayer.slice(1);
+                const loser = opponentPlayer === 'corn' ? 'Bean' : 'Corn';
+                const statusEl = document.getElementById('status');
+                statusEl.textContent = `${winnerCapitalized} wins the game! ${loser} got Succotashed!`;
+                statusEl.classList.add('status-win-highlight');
+
+                // Add star animation
+                const diceResultEl = document.getElementById('dice-result');
+                diceResultEl.innerHTML = '';
+                for (let i = 0; i < 15; i++) {
+                    const star = document.createElement('div');
+                    star.className = 'star';
+                    star.style.left = `${Math.random() * 100}%`;
+                    star.style.top = `${Math.random() * 80 + 10}%`;
+                    star.style.animationDelay = `${Math.random() * 1.0}s`;
+                    diceResultEl.appendChild(star);
+                }
+                renderBoard();
+                return;
+            }
 
             // Check for any battle scenario (2-to-1 or 1-to-2)
-            if ((movingPlayerPiecesAtDest === 2 && opponentPiecesAtDest === 1) || 
-                (movingPlayerPiecesAtDest === 1 && opponentPiecesAtDest === 2)) {
+            if ((board[toRow][toCol].filter(p => p.type === movingPlayer).length === 2 && board[toRow][toCol].filter(p => p.type === opponentPlayer).length === 1) || 
+                (board[toRow][toCol].filter(p => p.type === movingPlayer).length === 1 && board[toRow][toCol].filter(p => p.type === opponentPlayer).length === 2)) {
                 document.getElementById('dice-result').textContent = "Battle! Rolling dice...";
                 simulateDiceRoll(() => {
                     const diceRoll = Math.floor(Math.random() * 6) + 1;
                     let battleWinner, battleLoser, pieceToRemoveFromBoard, pieceToRelocateToHomeRow;
 
                     // Determine if moving player is the favorite (2 pieces) or underdog (1 piece)
-                    const isMovingPlayerFavorite = movingPlayerPiecesAtDest === 2;
+                    const isMovingPlayerFavorite = board[toRow][toCol].filter(p => p.type === movingPlayer).length === 2;
 
                     if ((isMovingPlayerFavorite && diceRoll >= 3) || (!isMovingPlayerFavorite && diceRoll <= 2)) {
                         // Moving player wins
@@ -535,33 +586,8 @@
                 });
             } else { // No battle
                 document.getElementById('dice-result').innerHTML = ''; // Clear dice result if no battle
-                const winningPath = checkWinCondition(opponentPlayer);
-                if (winningPath) {
-                    gameActive = false;
-                    drawWinningPath(winningPath);
-
-                    const winnerCapitalized = opponentPlayer.charAt(0).toUpperCase() + opponentPlayer.slice(1);
-                    const loser = opponentPlayer === 'corn' ? 'Bean' : 'Corn';
-                    const statusEl = document.getElementById('status');
-                    statusEl.textContent = `${winnerCapitalized} wins the game! ${loser} got Succotashed!`;
-                    statusEl.classList.add('status-win-highlight');
-
-                    // Add star animation
-                    const diceResultEl = document.getElementById('dice-result');
-                    diceResultEl.innerHTML = '';
-                    for (let i = 0; i < 15; i++) {
-                        const star = document.createElement('div');
-                        star.className = 'star';
-                        star.style.left = `${Math.random() * 100}%`;
-                        star.style.top = `${Math.random() * 80 + 10}%`;
-                        star.style.animationDelay = `${Math.random() * 1.0}s`;
-                        diceResultEl.appendChild(star);
-                    }
-
-                } else {
-                    currentPlayer = opponentPlayer;
-                    document.getElementById('status').textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
-                }
+                currentPlayer = opponentPlayer;
+                document.getElementById('status').textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
                 renderBoard();
             }
         }
@@ -732,6 +758,6 @@ target="_blank"><img class="statcounter"
 src="https://c.statcounter.com/13139847/0/467bf735/1/"
 alt="Web Analytics Made Easy - Statcounter"
 referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
-<!-- Succotash Game Version 0.1.20 Rules and About, Underdog attack -->
+<!-- Succotash Game Version 0.1.21 Rules and About, Underdog attack, move off co-squat to lose -->
 </body>
 </html>
