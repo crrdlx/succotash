@@ -4,3 +4,6 @@ index-*
 # Other existing patterns (if any)
 index-gem.html
 index-grok.html
+
+# Ignore this directory
+/ignore/
