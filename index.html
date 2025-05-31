@@ -70,12 +70,15 @@
             z-index: 2; /* Pieces above cell background, below selection potentially */
         }
         .corn {
-            background: radial-gradient(circle at 30% 30%, #fffaaa, #ffd700 80%);
-            color: #8B4513;
+            background: radial-gradient(circle at 30% 30%, #ffd700, #ff8c00 80%);
+            color: #000;
+            border: 2px solid #ff8c00;
         }
         .bean {
-            background: radial-gradient(circle at 30% 30%, #a9a9a9, #5a3a22 80%);
+            background: radial-gradient(circle at 30% 30%, #4a4a4a, #1a1a1a 80%);
             color: #fff;
+            border: 2px solid #1a1a1a;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
         }
         .piece-1 {
             left: 10px;
@@ -323,6 +326,7 @@
         let selectedPiece = null; // Stores { pieceRef, originalRow, originalCol }
         let awaitingPlacement = null;
         let gameActive = true;
+        let playerSelected = false; // New state variable to track if a player has been selected
 
         let winCanvas, winCtx; // For winning path canvas
 
@@ -368,6 +372,7 @@
 
         function startGame(firstPlayer) {
             currentPlayer = firstPlayer;
+            playerSelected = true; // Set playerSelected to true when a player is chosen
             document.getElementById('choose-player').style.display = 'none';
             document.getElementById('status').textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
         }
@@ -404,7 +409,7 @@
         }
 
         function handleCellClick(event) {
-            if (!gameActive) return;
+            if (!gameActive || !playerSelected) return; // Add check for playerSelected
 
             const targetCell = event.target.closest('.cell');
             if (!targetCell) return;
