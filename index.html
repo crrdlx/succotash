@@ -1,4 +1,4 @@
-<!-- Succotash Game Version 0.1.22 - Rules and About, Underdog attack, move off co-squat to lose, dark mode -->
+<!-- Succotash Game Version 0.1.23 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -68,6 +68,10 @@
             box-shadow: inset 0 0 5px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.3);
             transition: transform 0.2s ease;
             z-index: 2; /* Pieces above cell background, below selection potentially */
+            /* Center by default */
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
         }
         .corn {
             background: radial-gradient(circle at 30% 30%, #ffd700, #ff8c00 80%);
@@ -81,12 +85,21 @@
             box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
         }
         .piece-1 {
-            left: 10px;
             z-index: 1;
         }
         .piece-2 {
-            right: 10px;
             z-index: 2;
+        }
+        /* Only apply diagonal spacing when there are multiple pieces */
+        .cell:has(.piece-2) .piece-1 {
+            left: 5px;
+            top: 5px;
+            transform: none;
+        }
+        .cell:has(.piece-2) .piece-2 {
+            right: 5px;
+            bottom: 5px;
+            transform: none;
         }
         .selected { /* Applied to the cell */
             border: 3px solid #d9534f !important; /* Red border for selected, !important to override default */
@@ -778,4 +791,4 @@ alt="Web Analytics Made Easy - Statcounter"
 referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
 </body>
 </html>
-<!-- Succotash Game Version 0.1.22 - Rules and About, Underdog attack, move off co-squat to lose, dark mode -->
+<!-- Succotash Game Version 0.1.23 -->
