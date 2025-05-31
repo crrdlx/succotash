@@ -1,4 +1,4 @@
-<!-- Succotash Game Version 0.1.23 -->
+<!-- Succotash Game Version 0.1.25 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -568,16 +568,18 @@
                 return;
             }
 
-            // Check for any battle scenario (2-to-1 or 1-to-2)
-            if ((board[toRow][toCol].filter(p => p.type === movingPlayer).length === 2 && board[toRow][toCol].filter(p => p.type === opponentPlayer).length === 1) || 
-                (board[toRow][toCol].filter(p => p.type === movingPlayer).length === 1 && board[toRow][toCol].filter(p => p.type === opponentPlayer).length === 2)) {
+            // Check for any battle scenario (unequal number of pieces)
+            const movingPlayerPieces = board[toRow][toCol].filter(p => p.type === movingPlayer).length;
+            const opponentPieces = board[toRow][toCol].filter(p => p.type === opponentPlayer).length;
+            
+            if (movingPlayerPieces > 0 && opponentPieces > 0 && movingPlayerPieces !== opponentPieces) {
                 document.getElementById('dice-result').textContent = "Battle! Rolling dice...";
                 simulateDiceRoll(() => {
                     const diceRoll = Math.floor(Math.random() * 6) + 1;
                     let battleWinner, battleLoser, pieceToRemoveFromBoard, pieceToRelocateToHomeRow;
 
-                    // Determine if moving player is the favorite (2 pieces) or underdog (1 piece)
-                    const isMovingPlayerFavorite = board[toRow][toCol].filter(p => p.type === movingPlayer).length === 2;
+                    // Determine if moving player is the favorite (more pieces) or underdog (fewer pieces)
+                    const isMovingPlayerFavorite = movingPlayerPieces > opponentPieces;
 
                     if ((isMovingPlayerFavorite && diceRoll >= 3) || (!isMovingPlayerFavorite && diceRoll <= 2)) {
                         // Moving player wins
@@ -791,4 +793,4 @@ alt="Web Analytics Made Easy - Statcounter"
 referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
 </body>
 </html>
-<!-- Succotash Game Version 0.1.23 -->
+<!-- Succotash Game Version 0.1.25 -->
