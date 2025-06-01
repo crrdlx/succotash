@@ -1,4 +1,4 @@
-<!-- Succotash Game Version 0.1.30 - Tomatoes added -->
+<!-- Succotash Game Version 0.1.32 - Tomatoes added -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -434,6 +434,21 @@
                         (row === boardSize - 1 && col === 0) || 
                         (row === boardSize - 1 && col === boardSize - 1)) {
                         cell.classList.add('corner-tile');
+                        
+                        // Check if this corner is occupied by opponent pieces
+                        if (board[row][col]) {
+                            const hasCornPiece = board[row][col].some(p => p.type === 'corn' || (p.type === 'tomato' && p.side === 'corn'));
+                            const hasBeanPiece = board[row][col].some(p => p.type === 'bean' || (p.type === 'tomato' && p.side === 'bean'));
+                            
+                            // If it's a bean's home row corner (row 0) and has corn pieces
+                            if (row === 0 && hasCornPiece && !hasBeanPiece) {
+                                cell.classList.add('occupied');
+                            }
+                            // If it's a corn's home row corner (row 4) and has bean pieces
+                            if (row === boardSize - 1 && hasBeanPiece && !hasCornPiece) {
+                                cell.classList.add('occupied');
+                            }
+                        }
                     }
                     cell.dataset.row = row;
                     cell.dataset.col = col;
@@ -840,11 +855,7 @@
 
                     // Create a more specific battle message
                     let battleMessage = `Dice: ${diceRoll}. `;
-                    if (pieceToRemoveFromBoard.type === 'tomato') {
-                        battleMessage += `${battleWinner.charAt(0).toUpperCase() + battleWinner.slice(1)}'s Tomato wins the battle!`;
-                    } else {
-                        battleMessage += `${battleWinner.charAt(0).toUpperCase() + battleWinner.slice(1)} wins the battle!`;
-                    }
+                    battleMessage += `${battleWinner.charAt(0).toUpperCase() + battleWinner.slice(1)} wins the battle!`;
                     document.getElementById('dice-result').textContent = battleMessage;
                     awaitingPlacement = { pieceRefToPlace: pieceToRelocateToHomeRow, defeatedPlayerType: battleLoser };
                     document.getElementById('status').textContent = `${battleLoser.charAt(0).toUpperCase() + battleLoser.slice(1)}, place on YOUR home row.`;
@@ -1055,4 +1066,4 @@ alt="Web Analytics Made Easy - Statcounter"
 referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
 </body>
 </html>
-<!-- Succotash Game Version 0.1.30 - Tomatoes added -->
+<!-- Succotash Game Version 0.1.32 - Tomatoes added -->
