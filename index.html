@@ -1,4 +1,4 @@
-<!-- Succotash Game Version 0.1.25 -->
+<!-- Succotash Game Version 0.1.27 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -130,6 +130,7 @@
             position: relative; /* For positioning stars */
             overflow: hidden;   /* To contain stars */
             font-weight: bold; /* Make dice roll text bold */
+            transition: background-color 0.3s ease; /* Smooth transition for background color */
         }
         button#reset-button {
             margin-top: 20px;
@@ -188,6 +189,7 @@
             opacity: 0;
             animation: sparkle 4s ease-out forwards;
             box-shadow: 0 0 3px 1px yellow;
+            animation-delay: 0.5s; /* Increased delay before stars appear */
         }
 
         @keyframes sparkle {
@@ -523,20 +525,31 @@
                 const winnerCapitalized = movingPlayer.charAt(0).toUpperCase() + movingPlayer.slice(1);
                 const loser = movingPlayer === 'corn' ? 'Bean' : 'Corn';
                 const statusEl = document.getElementById('status');
-                statusEl.textContent = `${winnerCapitalized} wins the game! ${loser} got Succotashed!`;
+                statusEl.textContent = `${winnerCapitalized} wins the game!`;
                 statusEl.classList.add('status-win-highlight');
 
                 // Add star animation
                 const diceResultEl = document.getElementById('dice-result');
                 diceResultEl.innerHTML = '';
+                diceResultEl.style.backgroundColor = '#1a1a1a'; // Dark background for stars
                 for (let i = 0; i < 15; i++) {
                     const star = document.createElement('div');
                     star.className = 'star';
                     star.style.left = `${Math.random() * 100}%`;
                     star.style.top = `${Math.random() * 80 + 10}%`;
-                    star.style.animationDelay = `${Math.random() * 1.0}s`;
+                    star.style.animationDelay = `${Math.random() * 1.0 + 0.5}s`; // Increased base delay
                     diceResultEl.appendChild(star);
                 }
+                // Add "Succotashed" message after stars
+                setTimeout(() => {
+                    const succotashedMsg = document.createElement('div');
+                    succotashedMsg.style.color = 'gold';
+                    succotashedMsg.style.fontWeight = 'bold';
+                    succotashedMsg.style.fontSize = '1.2em';
+                    succotashedMsg.style.marginTop = '10px';
+                    succotashedMsg.textContent = `${loser} got Succotashed!`;
+                    diceResultEl.appendChild(succotashedMsg);
+                }, 4500); // Show after stars animation (4s) plus a small pause
                 renderBoard();
                 return;
             }
@@ -550,20 +563,31 @@
                 const winnerCapitalized = opponentPlayer.charAt(0).toUpperCase() + opponentPlayer.slice(1);
                 const loser = opponentPlayer === 'corn' ? 'Bean' : 'Corn';
                 const statusEl = document.getElementById('status');
-                statusEl.textContent = `${winnerCapitalized} wins the game! ${loser} got Succotashed!`;
+                statusEl.textContent = `${winnerCapitalized} wins the game!`;
                 statusEl.classList.add('status-win-highlight');
 
                 // Add star animation
                 const diceResultEl = document.getElementById('dice-result');
                 diceResultEl.innerHTML = '';
+                diceResultEl.style.backgroundColor = '#1a1a1a'; // Dark background for stars
                 for (let i = 0; i < 15; i++) {
                     const star = document.createElement('div');
                     star.className = 'star';
                     star.style.left = `${Math.random() * 100}%`;
                     star.style.top = `${Math.random() * 80 + 10}%`;
-                    star.style.animationDelay = `${Math.random() * 1.0}s`;
+                    star.style.animationDelay = `${Math.random() * 1.0 + 0.5}s`; // Increased base delay
                     diceResultEl.appendChild(star);
                 }
+                // Add "Succotashed" message after stars
+                setTimeout(() => {
+                    const succotashedMsg = document.createElement('div');
+                    succotashedMsg.style.color = 'gold';
+                    succotashedMsg.style.fontWeight = 'bold';
+                    succotashedMsg.style.fontSize = '1.2em';
+                    succotashedMsg.style.marginTop = '10px';
+                    succotashedMsg.textContent = `${loser} got Succotashed!`;
+                    diceResultEl.appendChild(succotashedMsg);
+                }, 4500); // Show after stars animation (4s) plus a small pause
                 renderBoard();
                 return;
             }
@@ -793,4 +817,4 @@ alt="Web Analytics Made Easy - Statcounter"
 referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
 </body>
 </html>
-<!-- Succotash Game Version 0.1.25 -->
+<!-- Succotash Game Version 0.1.27 -->
