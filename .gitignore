@@ -2,8 +2,8 @@
 index-*
 
 # Other existing patterns (if any)
-index-gem.html
-index-grok.html
+example.html
 
 # Ignore this directory
 /ignore/
+/archive/
