@@ -1,4 +1,4 @@
-<!-- Succotash Game Version 0.1.22 - Rules and About, Underdog attack, move off co-squat to lose, dark mode -->
+<!-- Succotash Game Version 0.2.0 - Initial public release -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -55,7 +55,16 @@
         .cell:hover {
             background-color: #e0d8c8;
         }
-        .corn, .bean {
+        /* Add styles for corner tiles */
+        .cell.corner-tile {
+            border: 3px solid #a67c52; /* Warmer, more noticeable earthy tone */
+            box-shadow: 0 0 5px rgba(166, 124, 82, 0.3); /* Subtle warm glow */
+        }
+        .cell.corner-tile:hover {
+            background-color: #e0d8c8;
+            box-shadow: 0 0 8px rgba(166, 124, 82, 0.4); /* Slightly stronger warm glow on hover */
+        }
+        .corn, .bean, .tomato {
             width: 30px; /* Smaller pieces */
             height: 30px;
             border-radius: 50%;
@@ -68,6 +77,10 @@
             box-shadow: inset 0 0 5px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.3);
             transition: transform 0.2s ease;
             z-index: 2; /* Pieces above cell background, below selection potentially */
+            /* Center by default */
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
         }
         .corn {
             background: radial-gradient(circle at 30% 30%, #ffd700, #ff8c00 80%);
@@ -80,13 +93,38 @@
             border: 2px solid #1a1a1a;
             box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
         }
+        .tomato {
+            font-size: 12px; /* Slightly larger font for the C/B */
+            font-weight: bold;
+        }
+        .tomato.corn-side {
+            background: radial-gradient(circle at 30% 30%, #ff8c00, #cc5500 80%);
+            color: #fff;
+            border: 2px solid #cc5500;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+        }
+        .tomato.bean-side {
+            background: radial-gradient(circle at 30% 30%, #2d5a27, #1a3d17 80%);
+            color: #fff;
+            border: 2px solid #1a3d17;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+        }
         .piece-1 {
-            left: 10px;
             z-index: 1;
         }
         .piece-2 {
-            right: 10px;
             z-index: 2;
+        }
+        /* Only apply diagonal spacing when there are multiple pieces */
+        .cell:has(.piece-2) .piece-1 {
+            left: 5px;
+            top: 5px;
+            transform: none;
+        }
+        .cell:has(.piece-2) .piece-2 {
+            right: 5px;
+            bottom: 5px;
+            transform: none;
         }
         .selected { /* Applied to the cell */
             border: 3px solid #d9534f !important; /* Red border for selected, !important to override default */
@@ -117,6 +155,7 @@
             position: relative; /* For positioning stars */
             overflow: hidden;   /* To contain stars */
             font-weight: bold; /* Make dice roll text bold */
+            transition: background-color 0.3s ease; /* Smooth transition for background color */
         }
         button#reset-button {
             margin-top: 20px;
@@ -175,6 +214,7 @@
             opacity: 0;
             animation: sparkle 4s ease-out forwards;
             box-shadow: 0 0 3px 1px yellow;
+            animation-delay: 0.5s; /* Increased delay before stars appear */
         }
 
         @keyframes sparkle {
@@ -327,6 +367,7 @@
         let awaitingPlacement = null;
         let gameActive = true;
         let playerSelected = false; // New state variable to track if a player has been selected
+        let hasTomato = { corn: false, bean: false }; // Track if each player has their Tomato
 
         let winCanvas, winCtx; // For winning path canvas
 
@@ -387,13 +428,40 @@
                 for (let col = 0; col < boardSize; col++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
+                    // Add corner-tile class to the four corner cells
+                    if ((row === 0 && col === 0) || 
+                        (row === 0 && col === boardSize - 1) || 
+                        (row === boardSize - 1 && col === 0) || 
+                        (row === boardSize - 1 && col === boardSize - 1)) {
+                        cell.classList.add('corner-tile');
+                        
+                        // Check if this corner is occupied by opponent pieces
+                        if (board[row][col]) {
+                            const hasCornPiece = board[row][col].some(p => p.type === 'corn' || (p.type === 'tomato' && p.side === 'corn'));
+                            const hasBeanPiece = board[row][col].some(p => p.type === 'bean' || (p.type === 'tomato' && p.side === 'bean'));
+                            
+                            // If it's a bean's home row corner (row 0) and has corn pieces
+                            if (row === 0 && hasCornPiece && !hasBeanPiece) {
+                                cell.classList.add('occupied');
+                            }
+                            // If it's a corn's home row corner (row 4) and has bean pieces
+                            if (row === boardSize - 1 && hasBeanPiece && !hasCornPiece) {
+                                cell.classList.add('occupied');
+                            }
+                        }
+                    }
                     cell.dataset.row = row;
                     cell.dataset.col = col;
 
                     if (board[row][col]) {
                         board[row][col].forEach((pieceRef, index) => {
                             const pieceDiv = document.createElement('div');
-                            pieceDiv.className = pieceRef.type;
+                            if (pieceRef.type === 'tomato') {
+                                pieceDiv.className = `tomato ${pieceRef.side}-side`;
+                                pieceDiv.textContent = pieceRef.side === 'corn' ? 'C' : 'B';
+                            } else {
+                                pieceDiv.className = pieceRef.type;
+                            }
                             pieceDiv.classList.add(`piece-${index + 1}`);
                             cell.appendChild(pieceDiv);
                         });
@@ -419,8 +487,20 @@
 
             if (awaitingPlacement) {
                 const homeRow = awaitingPlacement.defeatedPlayerType === 'corn' ? 0 : boardSize - 1;
-                if (row === homeRow && (!board[row][col] || board[row][col].length === 0)) {
-                    board[row][col] = [awaitingPlacement.pieceRefToPlace];
+                if (row === homeRow) {
+                    // Check if the target cell is co-squatted
+                    const targetCell = board[row][col];
+                    const isCoSquatted = targetCell && targetCell.length >= 2;
+                    
+                    if (isCoSquatted) {
+                        document.getElementById('status').textContent = "Cannot place defeated piece on a co-squatted tile. Choose an empty or single-occupied tile.";
+                        return;
+                    }
+                    
+                    if (!board[row][col]) {
+                        board[row][col] = [];
+                    }
+                    board[row][col].push(awaitingPlacement.pieceRefToPlace);
                     awaitingPlacement.pieceRefToPlace.row = row;
                     awaitingPlacement.pieceRefToPlace.col = col;
 
@@ -431,7 +511,7 @@
                     awaitingPlacement = null;
                     renderBoard();
                 } else {
-                    document.getElementById('status').textContent = `${awaitingPlacement.defeatedPlayerType.charAt(0).toUpperCase() + awaitingPlacement.defeatedPlayerType.slice(1)}, place on an EMPTY spot on YOUR home row.`;
+                    document.getElementById('status').textContent = `${awaitingPlacement.defeatedPlayerType.charAt(0).toUpperCase() + awaitingPlacement.defeatedPlayerType.slice(1)}, place on YOUR home row.`;
                 }
                 return;
             }
@@ -451,8 +531,8 @@
                     renderBoard();
                 }
             } else {
-                if (board[row][col] && board[row][col].some(p => p.type === currentPlayer)) {
-                    const pieceToSelect = board[row][col].find(p => p.type === currentPlayer);
+                if (board[row][col] && board[row][col].some(p => p.type === currentPlayer || (p.type === 'tomato' && p.side === currentPlayer))) {
+                    const pieceToSelect = board[row][col].find(p => p.type === currentPlayer || (p.type === 'tomato' && p.side === currentPlayer));
                     if (pieceToSelect) {
                         selectedPiece = { pieceRef: pieceToSelect, originalRow: row, originalCol: col };
                         renderBoard();
@@ -483,9 +563,123 @@
             }, 100);
         }
 
+        function checkCornerOccupation(player) {
+            const opponent = player === 'corn' ? 'bean' : 'corn';
+            const opponentHomeRow = player === 'corn' ? boardSize - 1 : 0;
+            
+            // Check if player has pieces in both corners of opponent's home row
+            const leftCorner = board[opponentHomeRow][0];
+            const rightCorner = board[opponentHomeRow][boardSize - 1];
+            
+            return leftCorner && rightCorner && 
+                   leftCorner.some(p => p.type === player) && 
+                   rightCorner.some(p => p.type === player);
+        }
+
+        function spawnTomato(player) {
+            if (hasTomato[player]) return; // Don't spawn if player already has a tomato
+            
+            const centerRow = Math.floor(boardSize / 2);
+            const centerCol = Math.floor(boardSize / 2);
+            
+            // Create the tomato piece
+            const tomatoRef = { 
+                type: 'tomato', 
+                id: `t${player}`, 
+                row: centerRow, 
+                col: centerCol,
+                side: player 
+            };
+            
+            // Add to pieces array
+            pieces[player].push(tomatoRef);
+            
+            // Get current pieces in center
+            const centerPieces = board[centerRow][centerCol] || [];
+            const playerPiecesInCenter = centerPieces.filter(p => 
+                p.type === player || (p.type === 'tomato' && p.side === player)
+            ).length;
+            const opponentPiecesInCenter = centerPieces.filter(p => 
+                p.type === (player === 'corn' ? 'bean' : 'corn') || 
+                (p.type === 'tomato' && p.side === (player === 'corn' ? 'bean' : 'corn'))
+            ).length;
+            
+            // Place on board
+            if (!board[centerRow][centerCol]) {
+                board[centerRow][centerCol] = [];
+            }
+            board[centerRow][centerCol].push(tomatoRef);
+            
+            // Mark that player has a tomato
+            hasTomato[player] = true;
+            
+            // Show message
+            const playerCapitalized = player.charAt(0).toUpperCase() + player.slice(1);
+            document.getElementById('dice-result').textContent = `${playerCapitalized} has earned a Tomato!`;
+            
+            // Check for battle scenarios
+            const totalPiecesInCenter = board[centerRow][centerCol].length;
+            
+            // If center is co-squatted (has pieces from both players)
+            if (opponentPiecesInCenter > 0) {
+                // If adding tomato would make it 3 pieces, initiate battle
+                if (totalPiecesInCenter > 2) {
+                    document.getElementById('dice-result').textContent = "Battle for the center! Rolling dice...";
+                    simulateDiceRoll(() => {
+                        const diceRoll = Math.floor(Math.random() * 6) + 1;
+                        let battleWinner, battleLoser, pieceToRemoveFromBoard;
+
+                        // Determine if moving player is the favorite (more pieces) or underdog (fewer pieces)
+                        const isMovingPlayerFavorite = playerPiecesInCenter > opponentPiecesInCenter;
+
+                        if ((isMovingPlayerFavorite && diceRoll >= 3) || (!isMovingPlayerFavorite && diceRoll <= 2)) {
+                            // Moving player wins
+                            battleWinner = player;
+                            battleLoser = player === 'corn' ? 'bean' : 'corn';
+                            // Find a piece to remove from the opponent's side
+                            pieceToRemoveFromBoard = board[centerRow][centerCol].find(p => 
+                                p.type === battleLoser || (p.type === 'tomato' && p.side === battleLoser)
+                            );
+                        } else {
+                            // Opponent wins
+                            battleWinner = player === 'corn' ? 'bean' : 'corn';
+                            battleLoser = player;
+                            pieceToRemoveFromBoard = tomatoRef;
+                        }
+
+                        board[centerRow][centerCol] = board[centerRow][centerCol].filter(p => p.id !== pieceToRemoveFromBoard.id);
+                        if (board[centerRow][centerCol].length === 0) {
+                            board[centerRow][centerCol] = null;
+                        }
+
+                        document.getElementById('dice-result').textContent = `Dice: ${diceRoll}. ${battleWinner.charAt(0).toUpperCase() + battleWinner.slice(1)} wins the battle!`;
+                        awaitingPlacement = { pieceRefToPlace: pieceToRemoveFromBoard, defeatedPlayerType: battleLoser };
+                        document.getElementById('status').textContent = `${battleLoser.charAt(0).toUpperCase() + battleLoser.slice(1)}, place on YOUR home row.`;
+                        renderBoard();
+                    });
+                }
+                // Otherwise, just co-squat (1-on-1 or 2-on-1)
+            }
+            // If center has only player's pieces, just stack
+            // If center is empty, tomato is already placed
+            
+            renderBoard();
+        }
+
         function movePiece(pieceRefToMove, fromRow, fromCol, toRow, toCol) {
-            const movingPlayer = pieceRefToMove.type;
+            const movingPlayer = pieceRefToMove.type === 'tomato' ? pieceRefToMove.side : pieceRefToMove.type;
             const opponentPlayer = movingPlayer === 'corn' ? 'bean' : 'corn';
+
+            console.log('Move Check:', {
+                pieceType: pieceRefToMove.type,
+                pieceSide: pieceRefToMove.side,
+                movingPlayer,
+                opponentPlayer,
+                fromRow,
+                fromCol,
+                toRow,
+                toCol
+            });
 
             if (board[fromRow][fromCol]) {
                 board[fromRow][fromCol] = board[fromRow][fromCol].filter(p => p.id !== pieceRefToMove.id);
@@ -501,6 +695,11 @@
             pieceRefToMove.row = toRow;
             pieceRefToMove.col = toCol;
 
+            // Check for corner occupation and potential tomato spawn
+            if (checkCornerOccupation(movingPlayer) && !hasTomato[movingPlayer]) {
+                spawnTomato(movingPlayer);
+            }
+
             // First check if moving player has won
             const movingPlayerWinningPath = checkWinCondition(movingPlayer);
             if (movingPlayerWinningPath) {
@@ -510,20 +709,31 @@
                 const winnerCapitalized = movingPlayer.charAt(0).toUpperCase() + movingPlayer.slice(1);
                 const loser = movingPlayer === 'corn' ? 'Bean' : 'Corn';
                 const statusEl = document.getElementById('status');
-                statusEl.textContent = `${winnerCapitalized} wins the game! ${loser} got Succotashed!`;
+                statusEl.textContent = `${winnerCapitalized} wins the game!`;
                 statusEl.classList.add('status-win-highlight');
 
                 // Add star animation
                 const diceResultEl = document.getElementById('dice-result');
                 diceResultEl.innerHTML = '';
+                diceResultEl.style.backgroundColor = '#1a1a1a'; // Dark background for stars
                 for (let i = 0; i < 15; i++) {
                     const star = document.createElement('div');
                     star.className = 'star';
                     star.style.left = `${Math.random() * 100}%`;
                     star.style.top = `${Math.random() * 80 + 10}%`;
-                    star.style.animationDelay = `${Math.random() * 1.0}s`;
+                    star.style.animationDelay = `${Math.random() * 1.0 + 0.5}s`; // Increased base delay
                     diceResultEl.appendChild(star);
                 }
+                // Add "Succotashed" message after stars
+                setTimeout(() => {
+                    const succotashedMsg = document.createElement('div');
+                    succotashedMsg.style.color = 'gold';
+                    succotashedMsg.style.fontWeight = 'bold';
+                    succotashedMsg.style.fontSize = '1.2em';
+                    succotashedMsg.style.marginTop = '10px';
+                    succotashedMsg.textContent = `${loser} got Succotashed!`;
+                    diceResultEl.appendChild(succotashedMsg);
+                }, 5000); // Show after stars animation (4s) plus a longer pause to ensure fade out
                 renderBoard();
                 return;
             }
@@ -537,62 +747,129 @@
                 const winnerCapitalized = opponentPlayer.charAt(0).toUpperCase() + opponentPlayer.slice(1);
                 const loser = opponentPlayer === 'corn' ? 'Bean' : 'Corn';
                 const statusEl = document.getElementById('status');
-                statusEl.textContent = `${winnerCapitalized} wins the game! ${loser} got Succotashed!`;
+                statusEl.textContent = `${winnerCapitalized} wins the game!`;
                 statusEl.classList.add('status-win-highlight');
 
                 // Add star animation
                 const diceResultEl = document.getElementById('dice-result');
                 diceResultEl.innerHTML = '';
+                diceResultEl.style.backgroundColor = '#1a1a1a'; // Dark background for stars
                 for (let i = 0; i < 15; i++) {
                     const star = document.createElement('div');
                     star.className = 'star';
                     star.style.left = `${Math.random() * 100}%`;
                     star.style.top = `${Math.random() * 80 + 10}%`;
-                    star.style.animationDelay = `${Math.random() * 1.0}s`;
+                    star.style.animationDelay = `${Math.random() * 1.0 + 0.5}s`; // Increased base delay
                     diceResultEl.appendChild(star);
                 }
+                // Add "Succotashed" message after stars
+                setTimeout(() => {
+                    const succotashedMsg = document.createElement('div');
+                    succotashedMsg.style.color = 'gold';
+                    succotashedMsg.style.fontWeight = 'bold';
+                    succotashedMsg.style.fontSize = '1.2em';
+                    succotashedMsg.style.marginTop = '10px';
+                    succotashedMsg.textContent = `${loser} got Succotashed!`;
+                    diceResultEl.appendChild(succotashedMsg);
+                }, 5000); // Show after stars animation (4s) plus a longer pause to ensure fade out
                 renderBoard();
                 return;
             }
 
-            // Check for any battle scenario (2-to-1 or 1-to-2)
-            if ((board[toRow][toCol].filter(p => p.type === movingPlayer).length === 2 && board[toRow][toCol].filter(p => p.type === opponentPlayer).length === 1) || 
-                (board[toRow][toCol].filter(p => p.type === movingPlayer).length === 1 && board[toRow][toCol].filter(p => p.type === opponentPlayer).length === 2)) {
+            // Check for any battle scenario
+            const piecesInCell = board[toRow][toCol] || [];
+            const movingPlayerPiecesInCell = piecesInCell.filter(p => 
+                p.type === movingPlayer || (p.type === 'tomato' && p.side === movingPlayer)
+            ).length;
+            const opponentPiecesInCell = piecesInCell.filter(p => 
+                p.type === opponentPlayer || (p.type === 'tomato' && p.side === opponentPlayer)
+            ).length;
+            
+            // Check if we're trying to add more than 2 pieces to a cell
+            const totalPiecesInCell = piecesInCell.length;
+            
+            // A battle should occur if:
+            // 1. There's a 2-on-1 situation (exactly 2 pieces vs 1 piece) AND there are pieces from both teams
+            // 2. We're trying to add more than 2 pieces to a cell AND there are pieces from both teams
+            const isTwoOnOne = (movingPlayerPiecesInCell === 2 && opponentPiecesInCell === 1) || 
+                              (movingPlayerPiecesInCell === 1 && opponentPiecesInCell === 2);
+            
+            // Battle occurs if there's a 2-on-1 situation OR if we're exceeding the piece limit
+            // AND there are pieces from both teams
+            const hasBothTeams = movingPlayerPiecesInCell > 0 && opponentPiecesInCell > 0;
+            const isValidAttack = (isTwoOnOne || totalPiecesInCell > 2) && hasBothTeams;
+            
+            // Debug logging
+            console.log('Battle Check:', {
+                movingPlayer,
+                opponentPlayer,
+                movingPlayerPiecesInCell,
+                opponentPiecesInCell,
+                isValidAttack,
+                totalPiecesInCell,
+                hasBothTeams,
+                isTwoOnOne,
+                piecesInCell: piecesInCell.map(p => ({
+                    type: p.type,
+                    side: p.side,
+                    id: p.id
+                }))
+            });
+            
+            if (isValidAttack) {
                 document.getElementById('dice-result').textContent = "Battle! Rolling dice...";
                 simulateDiceRoll(() => {
                     const diceRoll = Math.floor(Math.random() * 6) + 1;
                     let battleWinner, battleLoser, pieceToRemoveFromBoard, pieceToRelocateToHomeRow;
 
-                    // Determine if moving player is the favorite (2 pieces) or underdog (1 piece)
-                    const isMovingPlayerFavorite = board[toRow][toCol].filter(p => p.type === movingPlayer).length === 2;
+                    // Determine if moving player is the favorite (more pieces) or underdog (fewer pieces)
+                    const isMovingPlayerFavorite = movingPlayerPiecesInCell > opponentPiecesInCell;
 
                     if ((isMovingPlayerFavorite && diceRoll >= 3) || (!isMovingPlayerFavorite && diceRoll <= 2)) {
                         // Moving player wins
                         battleWinner = movingPlayer;
                         battleLoser = opponentPlayer;
-                        pieceToRemoveFromBoard = board[toRow][toCol].find(p => p.type === opponentPlayer);
+                        // Find a piece to remove from the opponent's side (including their tomato)
+                        pieceToRemoveFromBoard = piecesInCell.find(p => 
+                            p.type === opponentPlayer || (p.type === 'tomato' && p.side === opponentPlayer)
+                        );
                     } else {
                         // Opponent wins
                         battleWinner = opponentPlayer;
                         battleLoser = movingPlayer;
-                        pieceToRemoveFromBoard = pieceRefToMove;
+                        // If the moving piece is a tomato, remove it, otherwise remove the moving piece
+                        if (pieceRefToMove.type === 'tomato') {
+                            pieceToRemoveFromBoard = pieceRefToMove;
+                        } else {
+                            pieceToRemoveFromBoard = piecesInCell.find(p => 
+                                p.type === movingPlayer || (p.type === 'tomato' && p.side === movingPlayer)
+                            );
+                        }
                     }
                     pieceToRelocateToHomeRow = pieceToRemoveFromBoard;
 
-                    board[toRow][toCol] = board[toRow][toCol].filter(p => p.id !== pieceToRemoveFromBoard.id);
+                    board[toRow][toCol] = piecesInCell.filter(p => p.id !== pieceToRemoveFromBoard.id);
                     if (board[toRow][toCol].length === 0) {
                         board[toRow][toCol] = null;
                     }
 
-                    document.getElementById('dice-result').textContent = `Dice: ${diceRoll}. ${battleWinner.charAt(0).toUpperCase() + battleWinner.slice(1)} wins the battle!`;
+                    // Create a more specific battle message
+                    let battleMessage = `Dice: ${diceRoll}. `;
+                    battleMessage += `${battleWinner.charAt(0).toUpperCase() + battleWinner.slice(1)} wins the battle!`;
+                    document.getElementById('dice-result').textContent = battleMessage;
                     awaitingPlacement = { pieceRefToPlace: pieceToRelocateToHomeRow, defeatedPlayerType: battleLoser };
-                    document.getElementById('status').textContent = `${battleLoser.charAt(0).toUpperCase() + battleLoser.slice(1)}, click an empty spot on YOUR home row.`;
+                    document.getElementById('status').textContent = `${battleLoser.charAt(0).toUpperCase() + battleLoser.slice(1)}, place on YOUR home row.`;
+                    // Set the current player to the battle winner
+                    currentPlayer = battleWinner;
                     renderBoard();
                 });
             } else { // No battle
                 document.getElementById('dice-result').innerHTML = ''; // Clear dice result if no battle
-                currentPlayer = opponentPlayer;
-                document.getElementById('status').textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
+                // Switch turns after any move, unless there's a piece placement pending
+                if (!awaitingPlacement) {
+                    currentPlayer = opponentPlayer;
+                    document.getElementById('status').textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
+                }
                 renderBoard();
             }
         }
@@ -607,8 +884,8 @@
 
             for (let c = 0; c < boardSize; c++) {
                 if (board[startRow][c] &&
-                    board[startRow][c].some(p => p.type === player) &&
-                    !board[startRow][c].some(p => p.type === opponent)) {
+                    board[startRow][c].some(p => p.type === player || (p.type === 'tomato' && p.side === player)) &&
+                    !board[startRow][c].some(p => p.type === opponent || (p.type === 'tomato' && p.side === opponent))) {
                     const initialPath = [[startRow, c]];
                     q.push([startRow, c, initialPath]);
                     visitedCoords.add(`${startRow},${c}`);
@@ -632,8 +909,8 @@
                     if (nr >= 0 && nr < boardSize && nc >= 0 && nc < boardSize &&
                         !visitedCoords.has(neighborKey) &&
                         board[nr][nc] &&
-                        board[nr][nc].some(p => p.type === player) &&
-                        !board[nr][nc].some(p => p.type === opponent)) {
+                        board[nr][nc].some(p => p.type === player || (p.type === 'tomato' && p.side === player)) &&
+                        !board[nr][nc].some(p => p.type === opponent || (p.type === 'tomato' && p.side === opponent))) {
 
                         visitedCoords.add(neighborKey);
                         const newPath = currentPath.concat([[nr, nc]]);
@@ -707,26 +984,44 @@
             </div>
             <div class="modal-body">
                 <h2>Objective</h2>
-                <p>Connect your home row to your opponent's side. The connection can be a straight line or include diagonal paths.</p>
-
+                <p>Connect your home row to your opponent's side to win. The connection can be a straight line or include diagonal paths. Example below.</p>
+                <p><img src="images/corn-wins.png" alt="Example of Corn winning by connecting home row to opponent's side"></p>
                 <h2>Basic Rules</h2>
                 <ul>
-                    <li>Players take turns moving one piece at a time</li>
-                    <li>Movement is limited to one spot forward/back or sideways (NSEW)</li>
-                    <li>Opponents can occupy the same spot as equals ("co-squatting")</li>
-                    <li>Combat occurs when a piece moves to a spot with an opponent</li>
-                    <li>First to connect their home row to the opposite side wins</li>
-                    <li>You must have full control of each tile to win (no co-squatting to win)</li>
+                    <li>Players take turns moving one piece at a time.</li>
+                    <li>Movement is limited to one tile forward/back or sideways (NSEW).</li>
+                    <li>Opponents can occupy the same tile as equals ("co-squatting").</li>
+                    <li>An attack occurs when a piece moves onto a co-squatted tile.</li>
+                    <li>The first to connect their home row to the opposite side wins.</li>
+                    <li>You must have full control of each tile to win (no co-squatting in a winning connection).</li>
                 </ul>
 
                 <h2>Battle System</h2>
                 <p>An attack happens when there are 2 pieces against 1 opponent piece:</p>
                 <ul>
-                    <li>A dice roll determines the winner</li>
-                    <li>Roll of 1 or 2: Underdog wins (side with 1 piece)</li>
-                    <li>Roll of 3, 4, 5, or 6: Favorite wins (side with 2 pieces)</li>
-                    <li>Loser returns the piece to their home row</li>
-                    <li>Winner makes the next move</li>
+                    <li>A dice roll determines the winner.</li>
+                    <li><b>Roll of 1 or 2:</b> Underdog wins (side with 1 piece in battle).</li>
+                    <li><b>Roll of 3, 4, 5, or 6:</b> Favorite wins (side with 2 pieces in battle).</li>
+                    <li>Loser returns the piece to their home row.</li>
+                    <li>Winner makes the next move.</li>
+                </ul>
+
+                <h2>Tomatoes</h2>
+                <p>Each player can earn one bonus Tomato piece:</p>
+                <ul>
+                    <li>Earn a Tomato by moving into <b>both corner tiles of your opponent's home row.</b></li>
+                    <li>A Tomato is spawned in the center square and the player can exit 
+                    <li>Tomatoes are then played as a 6th piece.</li>
+                    <li>If the center already has one piece, the Tomato joins it.</li>
+                    <li>If the center already has two pieces co-squatting, the Tomato initiates a battle.</li>
+                    <li>The Corn Tomato is red (red corn), the Bean Tomato is green (green bean).</li>
+                </ul>
+
+                <h2>Randomization in real life</h2>
+                <p>If you're playing on paper with physical game pieces, using a die is best for randomizing an attack. If no die is available, here are a couple of options:</p>
+                <ul>
+                    <li><b>Draw straws.</b> Cut three straws, but make one slightly shorter. Jumble them, one person holds the straws in your hand, the other draws one out. The short straw represents a dice roll of 1 or 2 and the Underdog wins (player with only 1 piece in battle). The two long straws represent a dice roll of 3 through 6 and the Favorite wins (player with 2 pieces in battle). This technique gives the same probablity as rolling dice.</li>
+                    <li><b>Flip a coin.</b> If a coin is handy, this technique is good. For the Underdog to win, he or she (a) must win the first flip (if the Underdog <i>loses</i> the first flip, the battle is lost immediately), AND then (b) the Underdog must win EITHER a second OR third flip. This technique gives the Underdog a slightly better chance at winning as compared to a dice roll, about 4.2% better, but is still close.</li>
                 </ul>
 
                 <div style="text-align: center; margin-top: 30px;">
@@ -750,7 +1045,7 @@
 
                 <p>New to the game? <a href="#" class="about-link" onclick="closeModal('about'); openModal('rules'); return false;">Learn how to play</a>.</p>
 
-                <p>For a more detailed story about how Succotash came to be, including its origins and development, visit our <a href="about.html" class="about-link">full About page</a>.</p>
+                <p>For a more detailed story about how Succotash came to be, including its origins and development, visit the <a href="about.html" class="about-link">full About page</a>.</p>
             </div>
         </div>
     </div>
@@ -771,4 +1066,4 @@ alt="Web Analytics Made Easy - Statcounter"
 referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
 </body>
 </html>
-<!-- Succotash Game Version 0.1.22 - Rules and About, Underdog attack, move off co-squat to lose, dark mode -->
+<!-- Succotash Game Version 0.2.0 - Initial public release -->
